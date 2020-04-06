@@ -139,7 +139,7 @@ class UserProfile(APIView):
     """
     update user profile and display
     """
-    # authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProfileSerializer
 
@@ -206,7 +206,7 @@ class SeeProfile(generics.RetrieveAPIView):
     """
     update user profile and display
     """
-    # authentication_classes = (TokenAuthentication,)
+    authentication_classes = (TokenAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = UserSerializer
     lookup_url_kwarg = 'id'
@@ -217,8 +217,8 @@ class ReportViewset(viewsets.ModelViewSet):
     """
         GET, POST, PUT, DELETE,
     """
-    # permission_classes = (permissions.IsAuthenticated,)
-    # authentication_classes = (TokenAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
     serializer_class = ReportSerializer
     queryset = Report.objects.all()
 
@@ -297,6 +297,7 @@ class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
     serializer_class = DoctorBookingDetailPerDaySerializer
     queryset = DoctorBookingDetailPerDay.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
         if not self.request.user.is_doctor:
@@ -318,6 +319,7 @@ class PatientBookingDetailViewset(viewsets.ModelViewSet):
     serializer_class = PatientBookingDetailSerializer
     permission_classes = (permissions.IsAuthenticated,)
     queryset = PatientBookingDetail.objects.all()
+    authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
         if not self.request.user.is_patient:
