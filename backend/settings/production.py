@@ -6,7 +6,7 @@ SECRET_KEY = '@xn8l3lq=05u^i47a^dnrpr86qen0$-#@y^i0@l*+c9#_l0x^f'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['api-skin-cancer.herokuapp.com']
+ALLOWED_HOSTS = ['api-skin-cancer.herokuapp.com', '127.0.0.1']
 
 DATABASES = {
     'default': {

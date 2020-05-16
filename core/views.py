@@ -18,46 +18,73 @@ from rest_framework.response import Response
 from rest_framework.validators import ValidationError
 from rest_framework.views import APIView
 
-from .models import Profile, User, Report, AssignDoctor, PatientBookingDetail, DoctorBookingDetailPerDay
-from .serializers import DoctorBookingDetailPerDaySerializer, PatientBookingDetailSerializer, AssignDoctorSerializer
-from .serializers import SignupSerializer, LoginSerializer, ProfileSerializer, ReportSerializer, ReportImageSerializer, PasswordSerializer
+from .models import (
+    Profile,
+    User,
+    Report,
+    AssignDoctor,
+    PatientBookingDetail,
+    DoctorBookingDetailPerDay,
+)
+from .serializers import (
+    DoctorBookingDetailPerDaySerializer,
+    PatientBookingDetailSerializer,
+    AssignDoctorSerializer,
+)
+from .serializers import (
+    SignupSerializer,
+    LoginSerializer,
+    ProfileSerializer,
+    ReportSerializer,
+    ReportImageSerializer,
+    PasswordSerializer,
+)
 from .serializers import UserSerializer
 
 
 def email_send(user, username, email, current_site, text, token):
-    message = 'hello how are you'
-    msg_html = render_to_string('core/email_template.html', {
-        'user': username,
-        'domain': current_site.domain,
-        'uid': urlsafe_base64_encode(force_bytes(user.pk)),
-        'token': token,
-        'text': text,
-    })
-    subject = 'Activate your account'
+    message = "hello how are you"
+    msg_html = render_to_string(
+        "core/email_template.html",
+        {
+            "user": username,
+            "domain": current_site.domain,
+            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
+            "token": token,
+            "text": text,
+        },
+    )
+    subject = "Activate your account"
     from_mail = EMAIL_HOST_USER
     to_mail = [email]
-    return send_mail(subject, message, from_mail, to_mail, html_message=msg_html, fail_silently=False)
+    return send_mail(
+        subject, message, from_mail, to_mail, html_message=msg_html, fail_silently=False
+    )
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """
     A viewset for viewing and editing user instances.
     """
+
     serializer_class = UserSerializer
     queryset = User.objects.all()
     permission_classes = (permissions.IsAdminUser,)
 
-    @action(detail=True, methods=['get', 'post'])
+    @action(detail=True, methods=["get", "post"])
     def set_password(self, request, pk=None):
         user = self.get_object()
         serializer = PasswordSerializer(data=request.data)
 
         if serializer.is_valid():
-            if not user.check_password(serializer.data.get('old_password')):
-                return Response({'old_password': ['Wrong password.']}, status=status.HTTP_400_BAD_REQUEST)
-            user.set_password(serializer.data.get('new_password'))
+            if not user.check_password(serializer.data.get("old_password")):
+                return Response(
+                    {"old_password": ["Wrong password."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.set_password(serializer.data.get("new_password"))
             user.save()
-            return Response({'status': 'password set'}, status=status.HTTP_200_OK)
+            return Response({"status": "password set"}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -66,6 +93,7 @@ class Signup(APIView):
     """
     Creates the user.
     """
+
     serializer_class = SignupSerializer
 
     def post(self, request, format=None):
@@ -97,17 +125,17 @@ class Activate(ListView):
 
     def get(self, request, *args, **kwargs):
         try:
-            uidb = kwargs['uidb64']
+            uidb = kwargs["uidb64"]
             uid = force_text(urlsafe_base64_decode(uidb))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
         print(user)
-        if user is not None and self.check_token(user, self.kwargs['token']):
+        if user is not None and self.check_token(user, self.kwargs["token"]):
             user.is_active = True
             p, creared = Profile.objects.get_or_create(user=user)
             user.save()
-            return redirect('http://127.0.0.1:8000/api/login')
+            return redirect("http://127.0.0.1:8000/api/login")
         else:
             return HttpResponse("Invalid token")
 
@@ -116,29 +144,34 @@ class Login(APIView):
     """
     Login the user
     """
+
     serializer_class = LoginSerializer
 
-    def post(self, format=None, **kwargs, ):
+    def post(
+        self, format=None, **kwargs,
+    ):
         serializer = self.serializer_class(data=self.request.data)
         if serializer.is_valid():
-            user = serializer.validated_data['user']
+            user = serializer.validated_data["user"]
             login(self.request, user)
-            return Response({'token': user.auth_token.key}, status=status.HTTP_200_OK)
+            return Response({"token": user.auth_token.key}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class Logout(APIView):
-
     def get(self, request, *args, **kwargs):
         logout(request)
-        return Response({'message': 'successfully logged out'}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "successfully logged out"}, status=status.HTTP_200_OK
+        )
 
 
 class UserProfile(APIView):
     """
     update user profile and display
     """
+
     authentication_classes = (TokenAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProfileSerializer
@@ -171,7 +204,9 @@ class DoctorListView(generics.ListAPIView):
 
     def registration_number_filter(self, number):
         if number:
-            self.doctors = self.doctors.filter(profile__registration_number__icontains=number)
+            self.doctors = self.doctors.filter(
+                profile__registration_number__icontains=number
+            )
 
     def gender_filter(self, gender):
         if gender:
@@ -195,9 +230,9 @@ class DoctorListView(generics.ListAPIView):
 
     def get_queryset(self):
         param = self.request.query_params
-        self.city_filter(param.get('city', None))
-        self.registration_number_filter(param.get('registration_number', None))
-        self.gender_filter(param.get('gender', None))
+        self.city_filter(param.get("city", None))
+        self.registration_number_filter(param.get("registration_number", None))
+        self.gender_filter(param.get("gender", None))
         # self.assigned_filter(param.get('report_id', None), param.get('assign', None))
         return self.doctors
 
@@ -206,10 +241,11 @@ class SeeProfile(generics.RetrieveAPIView):
     """
     update user profile and display
     """
+
     authentication_classes = (TokenAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = UserSerializer
-    lookup_url_kwarg = 'id'
+    lookup_url_kwarg = "id"
     queryset = User.objects.all()
 
 
@@ -217,6 +253,7 @@ class ReportViewset(viewsets.ModelViewSet):
     """
         GET, POST, PUT, DELETE,
     """
+
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
     serializer_class = ReportSerializer
@@ -248,12 +285,13 @@ class ReportImagesViewset(viewsets.ModelViewSet):
         else:
              return unautherized
     """
+
     serializer_class = ReportImageSerializer
     permission_classes = (permissions.IsAuthenticated,)
     authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
-        report = self.request.query_params.get('report_id', None)
+        report = self.request.query_params.get("report_id", None)
         if not report:
             reports = Report.objects.filter(patient=self.request.user)
             # reports = Report.objects.all()
@@ -271,19 +309,19 @@ class ReportImagesViewset(viewsets.ModelViewSet):
         return rep.report_images.all()
 
     def perform_create(self, serializer):
-        report = serializer.validated_data['report']
-        skin_image = serializer.validated_data['skin_image']
+        report = serializer.validated_data["report"]
+        skin_image = serializer.validated_data["skin_image"]
         try:
             Report.objects.get(id=report.id)
         except Report.DoesNotExist:
-            raise ValidationError('Report is not valid')
+            raise ValidationError("Report is not valid")
 
         result = "pending"
         # serializer.save(web_opinion=result, report=report)
         if report.patient is self.request.user:
             serializer.save(web_opinion="this is our opinion", report=report)
         else:
-            raise ValidationError('You are not authorized')
+            raise ValidationError("You are not authorized")
 
 
 class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
@@ -294,6 +332,7 @@ class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
         POST:-
             Create slots by login doctor
     """
+
     serializer_class = DoctorBookingDetailPerDaySerializer
     queryset = DoctorBookingDetailPerDay.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
@@ -304,7 +343,7 @@ class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
             raise ValidationError("You are not doctor")
         slots = DoctorBookingDetailPerDay.objects.all()
         slots = self.request.user.all_booking_slot.all()
-        date = self.request.query_params.get('date', None)
+        date = self.request.query_params.get("date", None)
         if date:
             slots = slots.filter(date=date)
         return slots
@@ -327,7 +366,7 @@ class PatientBookingDetailViewset(viewsets.ModelViewSet):
         return self.request.user.patient_booking.all()
 
     def get_serializer_context(self):
-        return {'request': self.request}
+        return {"request": self.request}
 
     def perform_create(self, serializer):
         if not self.request.user.is_patient:
@@ -354,8 +393,8 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
         """
         if not self.request.user.is_patient:
             raise ValidationError("You are not patient")
-        report_id = self.request.query_params.get('report_id', None)
-        doctor_id = self.request.query_params.get('doctor_id', None)
+        report_id = self.request.query_params.get("report_id", None)
+        doctor_id = self.request.query_params.get("doctor_id", None)
         queryset = AssignDoctor.objects.all()
         if report_id is not None:
             try:
@@ -363,7 +402,7 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
                 if not report.patient.is_patient:
                     raise ValidationError("Invalid report")
             except Report.DoesNotExist:
-                raise ValidationError('Please provide valid report')
+                raise ValidationError("Please provide valid report")
 
             queryset = queryset.filter(assign_report=report_id)
 
@@ -373,7 +412,7 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
                 if not doctor.is_doctor:
                     raise ValidationError("Invalid doctor")
             except User.DoesNotExist:
-                raise ValidationError('Invalid Doctor')
+                raise ValidationError("Invalid Doctor")
             queryset = queryset.filter(doctor_id=doctor_id)
         return queryset
 
@@ -381,22 +420,22 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
         if not self.request.user.is_patient:
             raise ValidationError("You are not patient")
 
-        doctor = serializer.validated_data['doctor']
-        report = serializer.validated_data['assign_report']
+        doctor = serializer.validated_data["doctor"]
+        report = serializer.validated_data["assign_report"]
 
         try:
             _ = Report.objects.get(id=report.id)
         except Report.DoesNotExist:
-            raise ValidationError('Please provide valid report')
+            raise ValidationError("Please provide valid report")
         try:
             _ = User.objects.get(id=doctor.id)
         except User.DoesNotExist:
-            raise ValidationError('Please provide valid doctor')
+            raise ValidationError("Please provide valid doctor")
 
         if not doctor.is_doctor:
-            raise ValidationError('Your Doctor is not a doctor')
+            raise ValidationError("Your Doctor is not a doctor")
         # serializer.save(assign_report=report, doctor=doctor)
         if report.patient is self.request.user:
             serializer.save(assign_report=report, doctor=doctor)
         else:
-            raise ValidationError('You are not authorized')
+            raise ValidationError("You are not authorized")

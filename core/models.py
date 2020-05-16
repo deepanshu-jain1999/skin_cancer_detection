@@ -19,8 +19,8 @@ class User(AbstractUser):
 
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    photo = models.ImageField(upload_to='User_Profile/%Y-%m-%d', blank=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    photo = models.ImageField(upload_to="User_Profile/%Y-%m-%d", blank=True)
     date_of_birth = models.DateField(default=timezone.now)
     city = models.CharField(max_length=50, default="delhi")
     gender = models.IntegerField(choices=GENDER_CHOICES, default=1)
@@ -33,38 +33,63 @@ class Profile(models.Model):
 
 class Report(models.Model):
     report_name = models.CharField(max_length=100)
-    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='report')
+    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="report")
 
     class Meta:
-        unique_together = ('report_name', 'patient',)
+        unique_together = (
+            "report_name",
+            "patient",
+        )
 
     def __str__(self):
-        return "Patient Name:- '" + self.patient.username + "'    Report Name:- '" + self.report_name + "'"
+        return (
+            "Patient Name:- '"
+            + self.patient.username
+            + "'    Report Name:- '"
+            + self.report_name
+            + "'"
+        )
 
 
 class AssignDoctor(models.Model):
     opinion = models.TextField(blank=True)
-    doctor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assign_doctor')
-    assign_report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='assign_report')
+    doctor = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="assign_doctor"
+    )
+    assign_report = models.ForeignKey(
+        Report, on_delete=models.CASCADE, related_name="assign_report"
+    )
 
     def __str__(self):
         return "Doctor Name:- " + self.doctor.username
 
     class Meta:
-        unique_together = ('assign_report', 'doctor',)
+        unique_together = (
+            "assign_report",
+            "doctor",
+        )
 
 
 class ReportImage(models.Model):
-    skin_image = models.ImageField(upload_to='Patient/%Y-%m-%d')
+    skin_image = models.ImageField(upload_to="Patient/%Y-%m-%d")
     web_opinion = models.TextField(blank=True)
-    report = models.ForeignKey(Report, on_delete=models.CASCADE, related_name='report_images')
+    report = models.ForeignKey(
+        Report, on_delete=models.CASCADE, related_name="report_images"
+    )
 
     def __str__(self):
-        return "Patient Name:- " + self.report.patient.username + "   Report Name:- " + self.report.report_name
+        return (
+            "Patient Name:- "
+            + self.report.patient.username
+            + "   Report Name:- "
+            + self.report.report_name
+        )
 
 
 class DoctorBookingDetailPerDay(models.Model):
-    doctor = models.ForeignKey(User, on_delete=models.CASCADE, related_name='all_booking_slot')
+    doctor = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="all_booking_slot"
+    )
     date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
@@ -73,19 +98,29 @@ class DoctorBookingDetailPerDay(models.Model):
     max_token = models.IntegerField(default=10)
 
     class Meta:
-        unique_together = ('date', 'doctor',)
+        unique_together = (
+            "date",
+            "doctor",
+        )
 
     def __str__(self):
         return f"Doctor: {self.doctor} and Date: {self.date}"
 
 
 class PatientBookingDetail(models.Model):
-    patient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='patient_booking')
+    patient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="patient_booking"
+    )
     token_number = models.IntegerField(default=1)
-    booking_slot = models.ForeignKey(DoctorBookingDetailPerDay, related_name='appointment', on_delete=models.CASCADE)
+    booking_slot = models.ForeignKey(
+        DoctorBookingDetailPerDay, related_name="appointment", on_delete=models.CASCADE
+    )
 
     class Meta:
-        unique_together = ('patient', 'booking_slot',)
+        unique_together = (
+            "patient",
+            "booking_slot",
+        )
 
     def __str__(self):
         return self.patient.username

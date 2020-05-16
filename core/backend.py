@@ -3,7 +3,6 @@ from .models import User
 
 
 class UserEmailBackend(ModelBackend):
-
     def get_through_email(self, username, password):
         try:
             user = User.objects.get(email=username)
