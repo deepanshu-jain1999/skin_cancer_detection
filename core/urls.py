@@ -21,15 +21,15 @@ router.register(
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("signup/", views.Signup.as_view()),
-    path("login/", views.Login.as_view()),
+    path("signup/", views.Signup.as_view(), name="signup"),
+    path("login/", views.Login.as_view(), name="login"),
     re_path(
         r"^activate_user/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]+)/$",
         views.Activate.as_view(),
         name="activate",
     ),
-    path("logout/", views.Logout.as_view()),
-    path("profile/", views.UserProfile.as_view()),
+    path("logout/", views.Logout.as_view(), name="logout"),
+    path("profile/", views.UserProfile.as_view(), name="profile"),
     path("profile/<int:id>", views.SeeProfile.as_view()),
-    path("doctors-list/", views.DoctorListView.as_view()),
+    path("doctors-list/", views.DoctorListView.as_view(), name="doctors_list"),
 ]

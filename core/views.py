@@ -1,11 +1,8 @@
-from backend.settings.deployment import EMAIL_HOST_USER
-from django.conf.urls import url
 from django.contrib.auth import login, logout
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import send_mail
+
 from django.http import HttpResponse
 from django.shortcuts import redirect
-from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import ListView
@@ -40,26 +37,7 @@ from .serializers import (
     PasswordSerializer,
 )
 from .serializers import UserSerializer
-
-
-def email_send(user, username, email, current_site, text, token):
-    message = "hello how are you"
-    msg_html = render_to_string(
-        "core/email_template.html",
-        {
-            "user": username,
-            "domain": current_site.domain,
-            "uid": urlsafe_base64_encode(force_bytes(user.pk)),
-            "token": token,
-            "text": text,
-        },
-    )
-    subject = "Activate your account"
-    from_mail = EMAIL_HOST_USER
-    to_mail = [email]
-    return send_mail(
-        subject, message, from_mail, to_mail, html_message=msg_html, fail_silently=False
-    )
+from .utility import email_send, check_token
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -87,84 +65,6 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({"status": "password set"}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class Signup(APIView):
-    """
-    Creates the user.
-    """
-
-    serializer_class = SignupSerializer
-
-    def post(self, request, format=None):
-        serializer = self.serializer_class(data=self.request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            if user:
-                token = Token.objects.create(user=user)
-                json = serializer.data
-                username = json["username"]
-                email = json["email"]
-                current_site = get_current_site(request)
-                text = "Please Activate Your Account By clicking below :"
-                email_send(user, username, email, current_site, text, token.key)
-                return Response(json, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class Activate(ListView):
-    """
-    Activate user account
-    """
-
-    def check_token(self, user, token):
-        user_token = user.auth_token.key
-        if user_token == token:
-            return True
-        return False
-
-    def get(self, request, *args, **kwargs):
-        try:
-            uidb = kwargs["uidb64"]
-            uid = force_text(urlsafe_base64_decode(uidb))
-            user = User.objects.get(pk=uid)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            user = None
-        print(user)
-        if user is not None and self.check_token(user, self.kwargs["token"]):
-            user.is_active = True
-            p, creared = Profile.objects.get_or_create(user=user)
-            user.save()
-            return redirect("http://127.0.0.1:8000/api/login")
-        else:
-            return HttpResponse("Invalid token")
-
-
-class Login(APIView):
-    """
-    Login the user
-    """
-
-    serializer_class = LoginSerializer
-
-    def post(
-        self, format=None, **kwargs,
-    ):
-        serializer = self.serializer_class(data=self.request.data)
-        if serializer.is_valid():
-            user = serializer.validated_data["user"]
-            login(self.request, user)
-            return Response({"token": user.auth_token.key}, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
-
-
-class Logout(APIView):
-    def get(self, request, *args, **kwargs):
-        logout(request)
-        return Response(
-            {"message": "successfully logged out"}, status=status.HTTP_200_OK
-        )
 
 
 class UserProfile(APIView):
@@ -439,3 +339,63 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
             serializer.save(assign_report=report, doctor=doctor)
         else:
             raise ValidationError("You are not authorized")
+
+
+class Signup(APIView):
+    serializer_class = SignupSerializer
+
+    def post(self, request, format=None):
+        serializer = self.serializer_class(data=self.request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            if user:
+                token = Token.objects.create(user=user)
+                json = serializer.data
+                username = json["username"]
+                email = json["email"]
+                current_site = get_current_site(request)
+                text = "Please Activate Your Account By clicking below :"
+                email_send(user, username, email, current_site, text, token.key)
+                return Response({"Detail": "User Created,  Please verify your email"}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class Activate(APIView):
+
+    def get(self, request, *args, **kwargs):
+        try:
+            uidb = kwargs["uidb64"]
+            uid = force_text(urlsafe_base64_decode(uidb))
+            user = User.objects.get(pk=uid)
+        except Exception as e:
+            user = None
+        if user is not None and check_token(user, self.kwargs["token"]):
+            user.is_active = True
+            Profile.objects.get_or_create(user=user)
+            user.save()
+            return redirect("login")
+        else:
+            return HttpResponse("Invalid token")
+
+
+class Login(APIView):
+    serializer_class = LoginSerializer
+
+    def post(
+        self, format=None, **kwargs,
+    ):
+        serializer = self.serializer_class(data=self.request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data["user"]
+            login(self.request, user)
+            return Response({"token": user.auth_token.key}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class Logout(APIView):
+    def get(self, request, *args, **kwargs):
+        logout(request)
+        return Response(
+            {"message": "successfully logged out"}, status=status.HTTP_200_OK
+        )

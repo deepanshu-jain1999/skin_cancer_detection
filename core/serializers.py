@@ -53,25 +53,24 @@ class SignupSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         max_length=100, validators=[UniqueValidator(queryset=User.objects.all())]
     )
-    password = serializers.CharField(min_length=8, write_only=True)
-    # profile = ProfileSerializer()
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email", "password", "is_patient", "is_doctor")
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         validated_data["password"] = make_password(validated_data["password"])
         user = User.objects.create(**validated_data)
         return user
 
-    class Meta:
-        model = User
-        fields = ("id", "username", "email", "password", "is_patient", "is_doctor")
-
 
 class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=100)
+    user = serializers.CharField(max_length=100)
     password = serializers.CharField(min_length=8)
 
     def validate(self, attrs):
-        user_email = attrs.get("username")
+        user_email = attrs.get("user")
         password = attrs.get("password")
         if user_email and password:
             user = authenticate(username=user_email, password=password)
