@@ -12,6 +12,9 @@ from .models import AssignDoctor
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.hashers import make_password
 from rest_framework.validators import ValidationError
+from rest_framework.authtoken.models import Token
+from django.contrib.sites.shortcuts import get_current_site
+from .utility import email_send
 
 
 class PasswordSerializer(serializers.Serializer):
@@ -39,24 +42,17 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer(required=False)
-
-    class Meta:
-        model = User
-        fields = ["id", "username", "email", "first_name", "last_name", "profile"]
-
-
-class SignupSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True, validators=[UniqueValidator(queryset=User.objects.all())]
     )
     username = serializers.CharField(
         max_length=100, validators=[UniqueValidator(queryset=User.objects.all())]
     )
+    profile = ProfileSerializer(required=False)
 
     class Meta:
         model = User
-        fields = ("id", "username", "email", "password", "is_patient", "is_doctor")
+        fields = ["id", "username", "email", "is_doctor", "is_patient", "profile", "password"]
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
