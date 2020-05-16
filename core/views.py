@@ -29,7 +29,6 @@ from .serializers import (
     AssignDoctorSerializer,
 )
 from .serializers import (
-    SignupSerializer,
     LoginSerializer,
     ProfileSerializer,
     ReportSerializer,
@@ -38,6 +37,7 @@ from .serializers import (
 )
 from .serializers import UserSerializer
 from .utility import email_send, check_token
+from .permissions import CreateAndIsAuthenticated
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -47,10 +47,24 @@ class UserViewSet(viewsets.ModelViewSet):
 
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    permission_classes = (permissions.IsAdminUser,)
+    permission_classes = (CreateAndIsAuthenticated,)
 
-    @action(detail=True, methods=["get", "post"])
+    def perform_create(self, serializer):
+        user = serializer.save()
+        if user:
+            token = Token.objects.create(user=user)
+            json = serializer.data
+            username = json["username"]
+            email = json["email"]
+            current_site = get_current_site(self.request)
+            text = "Please Activate Your Account By clicking below :"
+            email_send(user, username, email, current_site, text, token.key)
+            return dict({"Detail": "User Created,  Please verify your email"})
+
+    @action(detail=True, methods=["GET", "PUT"])
     def set_password(self, request, pk=None):
+        if not request.user.is_authenticated:
+            return Response({"Detail: Not Found"}, status=status.HTTP_404_NOT_FOUND)
         user = self.get_object()
         serializer = PasswordSerializer(data=request.data)
 
@@ -78,7 +92,6 @@ class UserProfile(APIView):
 
     def get(self, request, *args, **kwargs):
         profile = Profile.objects.get(user=self.request.user)
-        # profile = Profile.objects.all()[0]
         serializer = self.serializer_class(profile, context={"request": request})
         data = serializer.data
         return Response(data, status=status.HTTP_200_OK)
@@ -339,25 +352,6 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
             serializer.save(assign_report=report, doctor=doctor)
         else:
             raise ValidationError("You are not authorized")
-
-
-class Signup(APIView):
-    serializer_class = SignupSerializer
-
-    def post(self, request, format=None):
-        serializer = self.serializer_class(data=self.request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            if user:
-                token = Token.objects.create(user=user)
-                json = serializer.data
-                username = json["username"]
-                email = json["email"]
-                current_site = get_current_site(request)
-                text = "Please Activate Your Account By clicking below :"
-                email_send(user, username, email, current_site, text, token.key)
-                return Response({"Detail": "User Created,  Please verify your email"}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Activate(APIView):

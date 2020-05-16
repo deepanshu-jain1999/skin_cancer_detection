@@ -21,7 +21,6 @@ router.register(
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("signup/", views.Signup.as_view(), name="signup"),
     path("login/", views.Login.as_view(), name="login"),
     re_path(
         r"^activate_user/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]+)/$",
