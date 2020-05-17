@@ -5,6 +5,7 @@ from . import views
 
 router = routers.DefaultRouter()
 router.register(r"users", views.UserViewSet, basename="user")
+router.register(r"profile", views.ProfileViewSet, basename="profile")
 router.register(r"report", views.ReportViewset)
 router.register(r"report-images", views.ReportImagesViewset, basename="report-images")
 router.register(r"assign-doctor", views.AssignDoctorViewset, basename="assign-doctor")
@@ -28,7 +29,7 @@ urlpatterns = [
         name="activate",
     ),
     path("logout/", views.Logout.as_view(), name="logout"),
-    path("profile/", views.UserProfile.as_view(), name="profile"),
-    path("profile/<int:id>", views.SeeProfile.as_view()),
+    # path("Userprofile/", views.UserProfile.as_view(), name="profile"),
+    path("Userprofile/<int:id>", views.SeeProfile.as_view()),
     path("doctors-list/", views.DoctorListView.as_view(), name="doctors_list"),
 ]

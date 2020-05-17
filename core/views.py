@@ -7,7 +7,7 @@ from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.views.generic import ListView
 from rest_framework import permissions
-from rest_framework import status, viewsets, generics
+from rest_framework import status, viewsets, generics, mixins
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
@@ -37,73 +37,7 @@ from .serializers import (
 )
 from .serializers import UserSerializer
 from .utility import email_send, check_token
-from .permissions import CreateAndIsAuthenticated
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    """
-    A viewset for viewing and editing user instances.
-    """
-
-    serializer_class = UserSerializer
-    queryset = User.objects.all()
-    permission_classes = (CreateAndIsAuthenticated,)
-
-    def perform_create(self, serializer):
-        user = serializer.save()
-        if user:
-            token = Token.objects.create(user=user)
-            json = serializer.data
-            username = json["username"]
-            email = json["email"]
-            current_site = get_current_site(self.request)
-            text = "Please Activate Your Account By clicking below :"
-            email_send(user, username, email, current_site, text, token.key)
-            return dict({"Detail": "User Created,  Please verify your email"})
-
-    @action(detail=True, methods=["GET", "PUT"])
-    def set_password(self, request, pk=None):
-        if not request.user.is_authenticated:
-            return Response({"Detail: Not Found"}, status=status.HTTP_404_NOT_FOUND)
-        user = self.get_object()
-        serializer = PasswordSerializer(data=request.data)
-
-        if serializer.is_valid():
-            if not user.check_password(serializer.data.get("old_password")):
-                return Response(
-                    {"old_password": ["Wrong password."]},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            user.set_password(serializer.data.get("new_password"))
-            user.save()
-            return Response({"status": "password set"}, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserProfile(APIView):
-    """
-    update user profile and display
-    """
-
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = ProfileSerializer
-
-    def get(self, request, *args, **kwargs):
-        profile = Profile.objects.get(user=self.request.user)
-        serializer = self.serializer_class(profile, context={"request": request})
-        data = serializer.data
-        return Response(data, status=status.HTTP_200_OK)
-
-    def put(self, request):
-        # profile = Profile.objects.get(user=self.request.user)
-        profile = Profile.objects.all()[0]
-        serializer = self.serializer_class(profile, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+from .custom_permissions import CreateAndIsAuthenticated
 
 
 class DoctorListView(generics.ListAPIView):
@@ -354,6 +288,35 @@ class AssignDoctorViewset(viewsets.ModelViewSet):
             raise ValidationError("You are not authorized")
 
 
+class ProfileViewSet(viewsets.ModelViewSet):
+    """
+    update user profile and display
+    """
+
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = ProfileSerializer
+    queryset = Profile.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    # def get(self, request, *args, **kwargs):
+    #     profile = Profile.objects.get(user=self.request.user)
+    #     serializer = self.serializer_class(profile, context={"request": request})
+    #     data = serializer.data
+    #     return Response(data, status=status.HTTP_200_OK)
+
+    # def put(self, request):
+    #     profile = Profile.objects.get(user=self.request.user)
+    #     # profile = Profile.objects.all()[0]
+    #     serializer = self.serializer_class(profile, data=request.data, partial=True)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class Activate(APIView):
 
     def get(self, request, *args, **kwargs):
@@ -370,6 +333,47 @@ class Activate(APIView):
             return redirect("login")
         else:
             return HttpResponse("Invalid token")
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for viewing and editing user instances.
+    """
+
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = (CreateAndIsAuthenticated,)
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        if user:
+            token = Token.objects.create(user=user)
+            json = serializer.data
+            username = json["username"]
+            email = json["email"]
+            current_site = get_current_site(self.request)
+            text = "Please Activate Your Account By clicking below :"
+            email_send(user, username, email, current_site, text, token.key)
+            return dict({"Detail": "User Created,  Please verify your email"})
+
+    @action(detail=True, methods=["GET", "PUT"])
+    def set_password(self, request, pk=None):
+        if not request.user.is_authenticated:
+            return Response({"Detail: Not Found"}, status=status.HTTP_404_NOT_FOUND)
+        user = self.get_object()
+        serializer = PasswordSerializer(data=request.data)
+
+        if serializer.is_valid():
+            if not user.check_password(serializer.data.get("old_password")):
+                return Response(
+                    {"old_password": ["Wrong password."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            user.set_password(serializer.data.get("new_password"))
+            user.save()
+            return Response({"status": "password set"}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class Login(APIView):
@@ -393,3 +397,4 @@ class Logout(APIView):
         return Response(
             {"message": "successfully logged out"}, status=status.HTTP_200_OK
         )
+

@@ -27,18 +27,13 @@ class PasswordSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    # user = serializers.ReadOnlyField(source='user.username')
+    user = serializers.HiddenField(
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         model = Profile
-        fields = [
-            "photo",
-            "date_of_birth",
-            "city",
-            "gender",
-            "qualification",
-            "registration_number",
-        ]
+        fields = "__all__"
 
 
 class UserSerializer(serializers.ModelSerializer):
