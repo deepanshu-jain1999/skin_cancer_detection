@@ -1,9 +1,9 @@
-from backend.settings.deployment import EMAIL_HOST_USER
-from django.conf.urls import url
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+from backend.settings.deployment import EMAIL_HOST_USER
 
 
 def email_send(user, username, email, current_site, text, token):

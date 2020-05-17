@@ -6,11 +6,17 @@ from . import views
 router = routers.SimpleRouter()
 router.register(r"users", views.UserViewSet, basename="user")
 router.register(r"profile", views.ProfileViewSet, basename="profile")
-router.register(r"assign-report", views.AssignReportToDoctorViewset, basename="assign-report")
+router.register(
+    r"assign-report", views.AssignReportToDoctorViewset, basename="assign-report"
+)
 router.register(r"report", views.ReportViewset, basename="report")
-report_router = routers.NestedSimpleRouter(router, r'report', lookup='report')
-report_router.register(r"report-images", views.ReportImagesViewset, basename="report-images")
-report_router.register(r"assign-doctor", views.AssignDoctorByPatientViewset, basename="assign-doctor")
+report_router = routers.NestedSimpleRouter(router, r"report", lookup="report")
+report_router.register(
+    r"report-images", views.ReportImagesViewset, basename="report-images"
+)
+report_router.register(
+    r"assign-doctor", views.AssignDoctorByPatientViewset, basename="assign-doctor"
+)
 # router.register(r"assign-doctor", views.AssignDoctorViewset, basename="assign-doctor")
 router.register(
     r"booking-slots-doctor",

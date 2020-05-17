@@ -1,5 +1,9 @@
+from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+
+from .models import AssignDoctor
 from .models import (
     User,
     Profile,
@@ -8,13 +12,6 @@ from .models import (
     DoctorBookingDetailPerDay,
     PatientBookingDetail,
 )
-from .models import AssignDoctor
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.hashers import make_password
-from rest_framework.validators import ValidationError
-from rest_framework.authtoken.models import Token
-from django.contrib.sites.shortcuts import get_current_site
-from .utility import email_send
 
 
 class PasswordSerializer(serializers.Serializer):
@@ -27,9 +24,7 @@ class PasswordSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
-    )
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = Profile
@@ -47,8 +42,16 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "email", "is_doctor", "is_patient", "profile", "password"]
-        extra_kwargs = {'password': {'write_only': True}}
+        fields = [
+            "id",
+            "username",
+            "email",
+            "is_doctor",
+            "is_patient",
+            "profile",
+            "password",
+        ]
+        extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
         validated_data["password"] = make_password(validated_data["password"])
@@ -74,7 +77,7 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError(message)
         else:
             message = "Include both username and  password"
-            raise serializers.ValidationError(message,)
+            raise serializers.ValidationError(message, )
         attrs["user"] = user
         return attrs
 
@@ -85,17 +88,17 @@ class AssignDoctorByPatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssignDoctor
         fields = "__all__"
-        extra_kwargs = {'opinion': {'read_only': True}}
+        extra_kwargs = {"opinion": {"read_only": True}}
 
     def get_validation_exclusions(self):
-        exclusions = super(AssignDoctorByPatientSerializer, self).get_validation_exclusions()
-        return exclusions + ['assign_report']
+        exclusions = super(
+            AssignDoctorByPatientSerializer, self
+        ).get_validation_exclusions()
+        return exclusions + ["assign_report"]
 
 
 class AssignReportToDoctorSerializer(serializers.ModelSerializer):
-    doctor = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
-    )
+    doctor = serializers.HiddenField(default=serializers.CurrentUserDefault())
     assign_report = serializers.CharField(default=None, allow_null=True)
 
     class Meta:
@@ -112,10 +115,10 @@ class ReportImageSerializer(serializers.ModelSerializer):
 
 
 class ReportSerializer(serializers.ModelSerializer):
-    patient = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
+    patient = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    assign_doctors = AssignDoctorByPatientSerializer(
+        "assign_doctor", many=True, required=False
     )
-    assign_doctors = AssignDoctorByPatientSerializer("assign_doctor", many=True, required=False)
     report_images = ReportImageSerializer("report_images", many=True, required=False)
 
     class Meta:
@@ -124,21 +127,19 @@ class ReportSerializer(serializers.ModelSerializer):
 
 
 class PatientBookingDetailSerializer(serializers.ModelSerializer):
-    patient = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
-    )
+    patient = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = PatientBookingDetail
         fields = "__all__"
-        extra_kwargs = {'token_number': {'read_only': True}}
+        extra_kwargs = {"token_number": {"read_only": True}}
 
 
 class DoctorBookingDetailPerDaySerializer(serializers.ModelSerializer):
-    doctor = serializers.HiddenField(
-        default=serializers.CurrentUserDefault()
+    doctor = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    appointments = PatientBookingDetailSerializer(
+        "booking_slot", many=True, required=False
     )
-    appointments = PatientBookingDetailSerializer("booking_slot", many=True, required=False)
 
     class Meta:
         model = DoctorBookingDetailPerDay

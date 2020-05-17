@@ -1,13 +1,11 @@
 from django.contrib.auth import login, logout
 from django.contrib.sites.shortcuts import get_current_site
-
 from django.http import HttpResponse
 from django.shortcuts import redirect
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.views.generic import ListView
+from django.utils.encoding import force_text
+from django.utils.http import urlsafe_base64_decode
 from rest_framework import permissions
-from rest_framework import status, viewsets, generics, mixins
+from rest_framework import status, viewsets, generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
@@ -15,12 +13,11 @@ from rest_framework.response import Response
 from rest_framework.validators import ValidationError
 from rest_framework.views import APIView
 
+from .custom_permissions import CreateAndIsAuthenticated, UserIsDoctor, UserIsPatient
 from .models import (
     Profile,
     User,
     Report,
-    ReportImage,
-    AssignDoctor,
     PatientBookingDetail,
     DoctorBookingDetailPerDay,
 )
@@ -39,7 +36,6 @@ from .serializers import (
 )
 from .serializers import UserSerializer
 from .utility import email_send, check_token
-from .custom_permissions import CreateAndIsAuthenticated, UserIsDoctor, UserIsPatient
 
 
 class DoctorListView(generics.ListAPIView):
@@ -103,7 +99,7 @@ class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
         except Exception as e:
             raise ValidationError("Not Found")
         token_used = booking_slot_object.token_used
-        serializer.save(token_number=token_used+1)
+        serializer.save(token_number=token_used + 1)
         booking_slot_object.token_used = token_used + 1
         booking_slot_object.save()
 
@@ -141,20 +137,21 @@ class ReportViewset(viewsets.ModelViewSet):
 
 
 class ReportImagesViewset(viewsets.ModelViewSet):
-
     serializer_class = ReportImageSerializer
     permission_classes = (permissions.IsAuthenticated, UserIsPatient)
     authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
-        report = Report.objects.filter(pk=self.kwargs['report_pk']).prefetch_related('report_images')
+        report = Report.objects.filter(pk=self.kwargs["report_pk"]).prefetch_related(
+            "report_images"
+        )
         if len(report) == 0 or report[0].patient != self.request.user:
             return ValidationError("Not Found")
         return report[0].report_images.all()
 
     def perform_create(self, serializer):
         try:
-            report = Report.objects.get(pk=self.kwargs['report_pk'])
+            report = Report.objects.get(pk=self.kwargs["report_pk"])
             if report.patient != self.request.user:
                 raise ValidationError("Not Found")
         except Exception as e:
@@ -171,14 +168,16 @@ class AssignDoctorByPatientViewset(viewsets.ModelViewSet):
     authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
-        report = Report.objects.filter(pk=self.kwargs['report_pk']).prefetch_related('assign_report')
+        report = Report.objects.filter(pk=self.kwargs["report_pk"]).prefetch_related(
+            "assign_report"
+        )
         if len(report) == 0 or report[0].patient != self.request.user:
             return ValidationError("Not Found")
         return report[0].assign_report.all()
 
     def perform_create(self, serializer):
         try:
-            report = Report.objects.get(pk=self.kwargs['report_pk'])
+            report = Report.objects.get(pk=self.kwargs["report_pk"])
             if report.patient != self.request.user:
                 raise ValidationError("Not Found")
         except Exception as e:
@@ -197,12 +196,6 @@ class AssignReportToDoctorViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return self.request.user.assign_doctor.all()
 
-    # def perform_update(self, serializer):
-    #     doctor = serializer.validated_data["doctor"]
-    #     if not doctor.is_doctor:
-    #         raise ValidationError("Not Found")
-    #     serializer.save()
-
 
 class ProfileViewSet(viewsets.ModelViewSet):
     """
@@ -216,7 +209,6 @@ class ProfileViewSet(viewsets.ModelViewSet):
 
 
 class Activate(APIView):
-
     def get(self, request, *args, **kwargs):
         try:
             uidb = kwargs["uidb64"]
@@ -278,7 +270,7 @@ class Login(APIView):
     serializer_class = LoginSerializer
 
     def post(
-        self, format=None, **kwargs,
+            self, format=None, **kwargs,
     ):
         serializer = self.serializer_class(data=self.request.data)
         if serializer.is_valid():
@@ -295,4 +287,3 @@ class Logout(APIView):
         return Response(
             {"message": "successfully logged out"}, status=status.HTTP_200_OK
         )
-
