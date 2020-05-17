@@ -19,6 +19,7 @@ from .models import (
     Profile,
     User,
     Report,
+    ReportImage,
     AssignDoctor,
     PatientBookingDetail,
     DoctorBookingDetailPerDay,
@@ -37,7 +38,7 @@ from .serializers import (
 )
 from .serializers import UserSerializer
 from .utility import email_send, check_token
-from .custom_permissions import CreateAndIsAuthenticated
+from .custom_permissions import CreateAndIsAuthenticated, UserIsDoctor, UserIsPatient
 
 
 class DoctorListView(generics.ListAPIView):
@@ -84,91 +85,48 @@ class DoctorListView(generics.ListAPIView):
         return self.doctors
 
 
-class SeeProfile(generics.RetrieveAPIView):
-    """
-    update user profile and display
-    """
-
-    authentication_classes = (TokenAuthentication,)
-    permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = UserSerializer
-    lookup_url_kwarg = "id"
-    queryset = User.objects.all()
-
-
 class ReportViewset(viewsets.ModelViewSet):
     """
         GET, POST, PUT, DELETE,
     """
 
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated, UserIsPatient)
     authentication_classes = (TokenAuthentication,)
     serializer_class = ReportSerializer
     queryset = Report.objects.all()
 
     def get_queryset(self):
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not a patient")
         return self.request.user.report.all()
 
-    def perform_create(self, serializer):
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not a patient")
-        serializer.save(patient=self.request.user)
+    @action(detail=True)
+    def report_images(self, request, pk=None):
+        report = self.get_object()
+        return report.report_images.all()
 
 
 class ReportImagesViewset(viewsets.ModelViewSet):
-    """
-    Add and create report image
-    GET:-
-        if ?report_id=x :
-        get report_images of this x report
-        else:
-             return all report_images
-
-    POST:-
-        if ?report_id=x && login_user == report_user :
-            create report_image report_images of this x report
-        else:
-             return unautherized
-    """
 
     serializer_class = ReportImageSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated, UserIsPatient)
     authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
-        report = self.request.query_params.get("report_id", None)
-        if not report:
-            reports = Report.objects.filter(patient=self.request.user)
-            # reports = Report.objects.all()
-            report_images = []
-            for rep in reports:
-                report_images += rep.report_images.all()
-            return report_images
-        try:
-            rep = Report.objects.get(id=report)
-        except Report.DoesNotExist:
-            raise ValidationError("Report is not valid")
-
-        if rep.patient is not self.request.user:
-            raise ValidationError("You are not authenticated")
-        return rep.report_images.all()
+        report = Report.objects.filter(pk=self.kwargs['report_pk']).prefetch_related('report_images')
+        if len(report) == 0 or report[0].patient != self.request.user:
+            return ValidationError("Not Found")
+        return report[0].report_images.all()
 
     def perform_create(self, serializer):
-        report = serializer.validated_data["report"]
-        skin_image = serializer.validated_data["skin_image"]
         try:
-            Report.objects.get(id=report.id)
-        except Report.DoesNotExist:
-            raise ValidationError("Report is not valid")
+            report = Report.objects.get(pk=self.kwargs['report_pk'])
+            if report.patient != self.request.user:
+                raise ValidationError("Not Found")
+        except Exception as e:
+            raise ValidationError("Not Found")
 
-        result = "pending"
-        # serializer.save(web_opinion=result, report=report)
-        if report.patient is self.request.user:
-            serializer.save(web_opinion="this is our opinion", report=report)
-        else:
-            raise ValidationError("You are not authorized")
+        result = "this is our opinion"
+        # skin_image = serializer.validated_data["skin_image"]
+        serializer.save(web_opinion=result, report=report)
 
 
 class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
@@ -298,23 +256,8 @@ class ProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ProfileSerializer
     queryset = Profile.objects.all()
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    # def get(self, request, *args, **kwargs):
-    #     profile = Profile.objects.get(user=self.request.user)
-    #     serializer = self.serializer_class(profile, context={"request": request})
-    #     data = serializer.data
-    #     return Response(data, status=status.HTTP_200_OK)
-
-    # def put(self, request):
-    #     profile = Profile.objects.get(user=self.request.user)
-    #     # profile = Profile.objects.all()[0]
-    #     serializer = self.serializer_class(profile, data=request.data, partial=True)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # def perform_create(self, serializer):
+    #     serializer.save(user=self.request.user)
 
 
 class Activate(APIView):

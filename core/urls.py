@@ -1,13 +1,14 @@
 from django.urls import path, include, re_path
-from rest_framework import routers
+from rest_framework_nested import routers
 
 from . import views
 
-router = routers.DefaultRouter()
+router = routers.SimpleRouter()
 router.register(r"users", views.UserViewSet, basename="user")
 router.register(r"profile", views.ProfileViewSet, basename="profile")
-router.register(r"report", views.ReportViewset)
-router.register(r"report-images", views.ReportImagesViewset, basename="report-images")
+router.register(r"report", views.ReportViewset, basename="report")
+report_router = routers.NestedSimpleRouter(router, r'report', lookup='report')
+report_router.register(r"report-images", views.ReportImagesViewset, basename="report-images")
 router.register(r"assign-doctor", views.AssignDoctorViewset, basename="assign-doctor")
 router.register(
     r"booking-slots-doctor",
@@ -22,6 +23,7 @@ router.register(
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("", include(report_router.urls)),
     path("login/", views.Login.as_view(), name="login"),
     re_path(
         r"^activate_user/(?P<uidb64>[0-9A-Za-z_\-]+)/(?P<token>[0-9A-Za-z]+)/$",
@@ -29,7 +31,5 @@ urlpatterns = [
         name="activate",
     ),
     path("logout/", views.Logout.as_view(), name="logout"),
-    # path("Userprofile/", views.UserProfile.as_view(), name="profile"),
-    path("Userprofile/<int:id>", views.SeeProfile.as_view()),
     path("doctors-list/", views.DoctorListView.as_view(), name="doctors_list"),
 ]

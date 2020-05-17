@@ -86,7 +86,7 @@ class AssignDoctorSerializer(serializers.ModelSerializer):
 
 
 class ReportImageSerializer(serializers.ModelSerializer):
-    # report = serializers.ReadOnlyField()
+    report = serializers.CharField(required=False)
 
     class Meta:
         model = ReportImage
@@ -94,7 +94,9 @@ class ReportImageSerializer(serializers.ModelSerializer):
 
 
 class ReportSerializer(serializers.ModelSerializer):
-    patient = serializers.ReadOnlyField(source="user.username")
+    patient = serializers.HiddenField(
+        default=serializers.CurrentUserDefault()
+    )
     assign_doctors = AssignDoctorSerializer("assign_doctor", many=True, required=False)
     report_images = ReportImageSerializer("report_images", many=True, required=False)
 

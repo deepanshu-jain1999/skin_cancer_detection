@@ -14,7 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'core',
     'drf_yasg',
-    'corsheaders'
+    'corsheaders',
 ]
 
 AUTHENTICATION_BACKENDS = [
