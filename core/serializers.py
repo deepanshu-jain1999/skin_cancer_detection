@@ -79,7 +79,25 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
-class AssignDoctorSerializer(serializers.ModelSerializer):
+class AssignDoctorByPatientSerializer(serializers.ModelSerializer):
+    assign_report = serializers.CharField(default=None, allow_null=True)
+
+    class Meta:
+        model = AssignDoctor
+        fields = "__all__"
+        extra_kwargs = {'opinion': {'read_only': True}}
+
+    def get_validation_exclusions(self):
+        exclusions = super(AssignDoctorByPatientSerializer, self).get_validation_exclusions()
+        return exclusions + ['assign_report']
+
+
+class AssignReportToDoctorSerializer(serializers.ModelSerializer):
+    doctor = serializers.HiddenField(
+        default=serializers.CurrentUserDefault()
+    )
+    assign_report = serializers.CharField(default=None, allow_null=True)
+
     class Meta:
         model = AssignDoctor
         fields = "__all__"
@@ -97,7 +115,7 @@ class ReportSerializer(serializers.ModelSerializer):
     patient = serializers.HiddenField(
         default=serializers.CurrentUserDefault()
     )
-    assign_doctors = AssignDoctorSerializer("assign_doctor", many=True, required=False)
+    assign_doctors = AssignDoctorByPatientSerializer("assign_doctor", many=True, required=False)
     report_images = ReportImageSerializer("report_images", many=True, required=False)
 
     class Meta:
@@ -106,37 +124,21 @@ class ReportSerializer(serializers.ModelSerializer):
 
 
 class PatientBookingDetailSerializer(serializers.ModelSerializer):
-    patient = serializers.ReadOnlyField(source="user.username")
-    token_number = serializers.ReadOnlyField()
-
-    def create(self, validated_data):
-        booking_slot = validated_data["booking_slot"]
-        try:
-            booking_slot_object = DoctorBookingDetailPerDay.objects.get(
-                id=booking_slot.id
-            )
-        except DoctorBookingDetailPerDay.DoesNotExist:
-            raise ValidationError("Please provide valid Booking details")
-        token_used = booking_slot_object.token_used
-        request = self.context.get("request")
-        patient = request.user
-        slot = PatientBookingDetail.objects.create(
-            patient=patient,
-            token_number=token_used + 1,
-            booking_slot_id=booking_slot.id,
-        )
-        booking_slot_object.token_used = token_used + 1
-        booking_slot_object.save()
-        return slot
+    patient = serializers.HiddenField(
+        default=serializers.CurrentUserDefault()
+    )
 
     class Meta:
         model = PatientBookingDetail
         fields = "__all__"
+        extra_kwargs = {'token_number': {'read_only': True}}
 
 
 class DoctorBookingDetailPerDaySerializer(serializers.ModelSerializer):
-    doctor = serializers.ReadOnlyField(source="user.username")
-    all_booking = PatientBookingDetailSerializer(source="appointment", many=True)
+    doctor = serializers.HiddenField(
+        default=serializers.CurrentUserDefault()
+    )
+    appointments = PatientBookingDetailSerializer("booking_slot", many=True, required=False)
 
     class Meta:
         model = DoctorBookingDetailPerDay

@@ -27,7 +27,8 @@ from .models import (
 from .serializers import (
     DoctorBookingDetailPerDaySerializer,
     PatientBookingDetailSerializer,
-    AssignDoctorSerializer,
+    AssignDoctorByPatientSerializer,
+    AssignReportToDoctorSerializer,
 )
 from .serializers import (
     LoginSerializer,
@@ -85,6 +86,41 @@ class DoctorListView(generics.ListAPIView):
         return self.doctors
 
 
+class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
+    serializer_class = DoctorBookingDetailPerDaySerializer
+    permission_classes = (permissions.IsAuthenticated, UserIsDoctor)
+    authentication_classes = (TokenAuthentication,)
+
+    def get_queryset(self):
+        return self.request.user.all_booking_slot.all()
+
+    def perform_create(self, serializer):
+        booking_slot = serializer["booking_slot"]
+        try:
+            booking_slot_object = DoctorBookingDetailPerDay.objects.get(
+                id=booking_slot.id
+            )
+        except Exception as e:
+            raise ValidationError("Not Found")
+        token_used = booking_slot_object.token_used
+        serializer.save(token_number=token_used+1)
+        booking_slot_object.token_used = token_used + 1
+        booking_slot_object.save()
+
+
+class PatientBookingDetailViewset(viewsets.ModelViewSet):
+    serializer_class = PatientBookingDetailSerializer
+    permission_classes = (permissions.IsAuthenticated, UserIsPatient)
+    queryset = PatientBookingDetail.objects.all()
+    authentication_classes = (TokenAuthentication,)
+
+    def get_queryset(self):
+        return self.request.user.patient_booking.all()
+
+    def get_serializer_context(self):
+        return {"request": self.request}
+
+
 class ReportViewset(viewsets.ModelViewSet):
     """
         GET, POST, PUT, DELETE,
@@ -129,121 +165,43 @@ class ReportImagesViewset(viewsets.ModelViewSet):
         serializer.save(web_opinion=result, report=report)
 
 
-class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
-    """
-        GET:-
-            All slots of doctor
-            Filter by ?date=yyyy-mm-dd
-        POST:-
-            Create slots by login doctor
-    """
-
-    serializer_class = DoctorBookingDetailPerDaySerializer
-    queryset = DoctorBookingDetailPerDay.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
+class AssignDoctorByPatientViewset(viewsets.ModelViewSet):
+    serializer_class = AssignDoctorByPatientSerializer
+    permission_classes = (permissions.IsAuthenticated, UserIsPatient)
     authentication_classes = (TokenAuthentication,)
 
     def get_queryset(self):
-        if not self.request.user.is_doctor:
-            raise ValidationError("You are not doctor")
-        slots = DoctorBookingDetailPerDay.objects.all()
-        slots = self.request.user.all_booking_slot.all()
-        date = self.request.query_params.get("date", None)
-        if date:
-            slots = slots.filter(date=date)
-        return slots
+        report = Report.objects.filter(pk=self.kwargs['report_pk']).prefetch_related('assign_report')
+        if len(report) == 0 or report[0].patient != self.request.user:
+            return ValidationError("Not Found")
+        return report[0].assign_report.all()
 
     def perform_create(self, serializer):
-        if not self.request.user.is_doctor:
-            raise ValidationError("You are not doctor")
-        serializer.save(doctor=self.request.user)
-
-
-class PatientBookingDetailViewset(viewsets.ModelViewSet):
-    serializer_class = PatientBookingDetailSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    queryset = PatientBookingDetail.objects.all()
-    authentication_classes = (TokenAuthentication,)
-
-    def get_queryset(self):
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not patient")
-        return self.request.user.patient_booking.all()
-
-    def get_serializer_context(self):
-        return {"request": self.request}
-
-    def perform_create(self, serializer):
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not patient")
-        print(serializer)
-        serializer.save(patient=self.request.user, token=1)
-
-
-class AssignDoctorViewset(viewsets.ModelViewSet):
-    serializer_class = AssignDoctorSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    authentication_classes = (TokenAuthentication,)
-    queryset = AssignDoctor.objects.all()
-
-    def get_queryset(self):
-        """
-            GET:
-                ?report_id=x&doctor_id=y
-
-            POST:
-                only create
-                 1. when doctor is proper doctor
-                 2. patient is login user
-        """
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not patient")
-        report_id = self.request.query_params.get("report_id", None)
-        doctor_id = self.request.query_params.get("doctor_id", None)
-        queryset = AssignDoctor.objects.all()
-        if report_id is not None:
-            try:
-                report = Report.objects.get(id=report_id)
-                if not report.patient.is_patient:
-                    raise ValidationError("Invalid report")
-            except Report.DoesNotExist:
-                raise ValidationError("Please provide valid report")
-
-            queryset = queryset.filter(assign_report=report_id)
-
-        if doctor_id is not None:
-            try:
-                doctor = User.objects.get(id=doctor_id)
-                if not doctor.is_doctor:
-                    raise ValidationError("Invalid doctor")
-            except User.DoesNotExist:
-                raise ValidationError("Invalid Doctor")
-            queryset = queryset.filter(doctor_id=doctor_id)
-        return queryset
-
-    def perform_create(self, serializer):
-        if not self.request.user.is_patient:
-            raise ValidationError("You are not patient")
-
+        try:
+            report = Report.objects.get(pk=self.kwargs['report_pk'])
+            if report.patient != self.request.user:
+                raise ValidationError("Not Found")
+        except Exception as e:
+            raise ValidationError("Not Found")
         doctor = serializer.validated_data["doctor"]
-        report = serializer.validated_data["assign_report"]
-
-        try:
-            _ = Report.objects.get(id=report.id)
-        except Report.DoesNotExist:
-            raise ValidationError("Please provide valid report")
-        try:
-            _ = User.objects.get(id=doctor.id)
-        except User.DoesNotExist:
-            raise ValidationError("Please provide valid doctor")
-
         if not doctor.is_doctor:
-            raise ValidationError("Your Doctor is not a doctor")
-        # serializer.save(assign_report=report, doctor=doctor)
-        if report.patient is self.request.user:
-            serializer.save(assign_report=report, doctor=doctor)
-        else:
-            raise ValidationError("You are not authorized")
+            raise ValidationError("Not Found")
+        serializer.save(assign_report=report)
+
+
+class AssignReportToDoctorViewset(viewsets.ModelViewSet):
+    serializer_class = AssignReportToDoctorSerializer
+    permission_classes = (permissions.IsAuthenticated, UserIsDoctor)
+    authentication_classes = (TokenAuthentication,)
+
+    def get_queryset(self):
+        return self.request.user.assign_doctor.all()
+
+    # def perform_update(self, serializer):
+    #     doctor = serializer.validated_data["doctor"]
+    #     if not doctor.is_doctor:
+    #         raise ValidationError("Not Found")
+    #     serializer.save()
 
 
 class ProfileViewSet(viewsets.ModelViewSet):
@@ -255,9 +213,6 @@ class ProfileViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = ProfileSerializer
     queryset = Profile.objects.all()
-
-    # def perform_create(self, serializer):
-    #     serializer.save(user=self.request.user)
 
 
 class Activate(APIView):
