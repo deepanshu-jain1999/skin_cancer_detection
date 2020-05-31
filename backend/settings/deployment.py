@@ -8,7 +8,7 @@ SECRET_KEY = "@xn8l3lq=05u^i47a^dnrpr86qen0$-#@y^i0@l*+c9#_l0x^f"
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.43.185", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["skin-cancer-detection.herokuapp.com", "localhost", "127.0.0.1"]
 
 DATABASES = {
     "default": {
