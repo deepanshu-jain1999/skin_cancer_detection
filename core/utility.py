@@ -3,7 +3,7 @@ from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
-from backend.settings.deployment import EMAIL_HOST_USER
+from django.conf import settings
 
 
 def email_send(user, username, email, current_site, text, token):
@@ -19,7 +19,7 @@ def email_send(user, username, email, current_site, text, token):
         },
     )
     subject = "Activate your account"
-    from_mail = EMAIL_HOST_USER
+    from_mail = settings.EMAIL_HOST_USER
     to_mail = [email]
     return send_mail(
         subject, message, from_mail, to_mail, html_message=msg_html, fail_silently=False
