@@ -118,10 +118,10 @@ class PatientBookingDetailViewset(viewsets.ModelViewSet):
         return {"request": self.request}
 
     def perform_create(self, serializer):
-        booking_slot = serializer["booking_slot"]
+        booking_slot = self.request.data["booking_slot"]
         try:
             booking_slot_object = DoctorBookingDetailPerDay.objects.get(
-                id=booking_slot.id
+                id=booking_slot
             )
         except Exception as e:
             raise ValidationError("Not Found")

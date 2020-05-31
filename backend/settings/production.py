@@ -15,6 +15,16 @@ DATABASES = {
         'USER': 'password'
     }
 }
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'skin_cancer',
+#         'USER': 'skincanceruser',
+#         'PASSWORD': 'dj',
+#         "HOST": "localhost",
+#         "PORT": "",
+#     }
+# }
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "staticfiles")
