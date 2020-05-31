@@ -1,1 +1,1 @@
-postman link:- https://www.getpostman.com/collections/4f9ab344e4dd73443e92
+postman link:- https://www.getpostman.com/collections/e306c2373002bf1b599a
