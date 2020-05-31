@@ -11,12 +11,13 @@ DEBUG = True
 ALLOWED_HOSTS = ["api-skin-cancer.herokuapp.com", "localhost"]
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "skin_cancer",
-        "USER": "skincanceruser",
-        "PASSWORD": "dj",
-        "HOST": "",
-        "PORT": "",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'dj',
+        'USER': 'password'
     }
 }
+import dj_database_url
+
+prod_db = dj_database_url.config(conn_max_age=500)
+DATABASES["default"].update(prod_db)

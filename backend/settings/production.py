@@ -9,17 +9,13 @@ DEBUG = True
 ALLOWED_HOSTS = ["api-skin-cancer.herokuapp.com", "127.0.0.1"]
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql_psycopg2",
-        "NAME": "skin_cancer",
-        "USER": "skincanceruser",
-        "PASSWORD": "dj",
-        "HOST": "",
-        "PORT": "",
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'dj',
+        'USER': 'password'
     }
 }
 
-MIDDLEWARE += ["whitenoise.middleware.WhiteNoiseMiddleware"]
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(PROJECT_ROOT, "staticfiles")
 STATIC_URL = "/static/"
@@ -28,7 +24,6 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = (os.path.join(PROJECT_ROOT, "static"),)
 
 #  Add configuration for static files storage using whitenoise
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 import dj_database_url
 
