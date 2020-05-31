@@ -38,6 +38,20 @@ from .serializers import UserSerializer
 from .utility import email_send, check_token
 
 
+def get_cancer_name():
+    cancer_list = ["Melanocytic Nevi",
+                   "Melanoma",
+                   "Benign Keratosis",
+                   "Basal Cell Carcinoma",
+                   "Actinic Keratoses",
+                   "Vascular Lesions",
+                   "Dermatofibroma",
+                   ]
+    from random import randrange
+    ind = randrange(len(cancer_list))
+    return cancer_list[ind]
+
+
 class DoctorListView(generics.ListAPIView):
     serializer_class = UserSerializer
     paginate_by = 5
@@ -157,7 +171,7 @@ class ReportImagesViewset(viewsets.ModelViewSet):
         except Exception as e:
             raise ValidationError("Not Found")
 
-        result = "this is our opinion"
+        result = get_cancer_name()
         # skin_image = serializer.validated_data["skin_image"]
         serializer.save(web_opinion=result, report=report)
 
