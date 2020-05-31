@@ -104,19 +104,6 @@ class DoctorBookingDetailPerDayViewset(viewsets.ModelViewSet):
     def get_queryset(self):
         return self.request.user.all_booking_slot.all()
 
-    def perform_create(self, serializer):
-        booking_slot = serializer["booking_slot"]
-        try:
-            booking_slot_object = DoctorBookingDetailPerDay.objects.get(
-                id=booking_slot.id
-            )
-        except Exception as e:
-            raise ValidationError("Not Found")
-        token_used = booking_slot_object.token_used
-        serializer.save(token_number=token_used + 1)
-        booking_slot_object.token_used = token_used + 1
-        booking_slot_object.save()
-
 
 class PatientBookingDetailViewset(viewsets.ModelViewSet):
     serializer_class = PatientBookingDetailSerializer
@@ -129,6 +116,19 @@ class PatientBookingDetailViewset(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {"request": self.request}
+
+    def perform_create(self, serializer):
+        booking_slot = serializer["booking_slot"]
+        try:
+            booking_slot_object = DoctorBookingDetailPerDay.objects.get(
+                id=booking_slot.id
+            )
+        except Exception as e:
+            raise ValidationError("Not Found")
+        token_used = booking_slot_object.token_used
+        serializer.save(token_number=token_used + 1)
+        booking_slot_object.token_used = token_used + 1
+        booking_slot_object.save()
 
 
 class ReportViewset(viewsets.ModelViewSet):
