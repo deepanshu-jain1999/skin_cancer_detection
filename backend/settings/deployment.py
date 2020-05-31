@@ -16,7 +16,7 @@ DATABASES = {
         "NAME": "skin_cancer",
         "USER": "skincanceruser",
         "PASSWORD": "dj",
-        "HOST": "localhost",
+        "HOST": "",
         "PORT": "",
     }
 }
