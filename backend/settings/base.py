@@ -110,4 +110,3 @@ STATIC_URL = "/static/"
 CORS_ORIGIN_ALLOW_ALL = True
 
 login = "api/login/"
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
