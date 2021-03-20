@@ -19,7 +19,7 @@ ipython==7.14.0
 ipython-genutils==0.2.0
 itypes==1.1.0
 jedi==0.17.0
-Jinja2==2.11.1
+Jinja2==2.11.3
 MarkupSafe==1.1.1
 packaging==20.3
 parso==0.7.0
